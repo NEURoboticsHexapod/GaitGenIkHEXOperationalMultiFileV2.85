@@ -1,4 +1,4 @@
-//Test Code for Maestro ServoController
+// Test Code for Maestro ServoController
 
 #define UserSerial Serial
 #define MaestroSerial Serial2
@@ -25,8 +25,7 @@ void ServoWrite(byte ServoID, unsigned int Pos){
   UserSerial.println(Servoplace);
   UserSerial.println(Data1);
   UserSerial.println(Data2);
-  
-  
+   
   MaestroSerial.write(Header);
   MaestroSerial.write(Device);
   MaestroSerial.write(TruncatedCommand);

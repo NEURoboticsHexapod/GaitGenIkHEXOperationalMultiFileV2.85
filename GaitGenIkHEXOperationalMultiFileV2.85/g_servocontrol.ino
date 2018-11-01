@@ -1,60 +1,75 @@
-//map values to the servos, test for boundries and write to servos
-void DXLServoMap(){
-  for (int i = 0; i < 6; i++){//Iterate through the legs
-    for (int j = 0; j < 3; j++){//Iterate through the servos on each leg
-      int DegreeAngle = LegDynamixels[i][j] * (180/3.14159);
-      int ServoPos = map(DegreeAngle, -150, 150, 0, 1024);
-      if ((ServoPos > DXLServoLimits[i][j][0])&&(ServoPos < DXLServoLimits[i][j][1])){// Servo is within limits
-        ServoWrite(DXLServoLimits[i][j][2],ServoPos);
-        UserSerial.print("G");
+// Constants that will be included in every packet sent to the microcontroller.
+const byte HEADER_CONST = 170;
+const byte DEVICE_ID = 12;
+const byte COMMAND_ID = 04;
+
+// map values to the servos, test for boundries and write to servos
+void DXLServoMap() {
+  // Iterate through each leg.
+  for (int i = 0; i < 6; i++) {
+    // Iterate through each servo on each leg.
+    for (int j = 0; j < 3; j++) {
+      // Calculate the desired degree position of the servo.
+      int deg = LegDynamixels[i][j] * (180 / 3.14159);
+      // Map the degree value of the servo to a microsecond value.
+      int servoPos = map(deg, -150, 150, 0, 1024);
+
+      if (servoPos > DXLServoLimits[i][j][0] && servoPos < DXLServoLimits[i][j][1]) {
+        // If the servo is within the limits, write the move command to the servo.
+        servoWrite(DXLServoLimits[i][j][2], ServoPos);
+        UserSerial.println("Wrote to servo " + j + " on leg " + i);
+      } else {
+        // If the servo is not within the limits, do nothing.
+        UserSerial.println("Servo " + j + " on leg " + i + " out of limits");
       }
-      else{//Servo not in limits
-        //Do nothing
-        UserSerial.print("B");
-      }
-      //UserSerial.print(ServoLimits[i][j][2]);
-      //UserSerial.print(" ");
-      //UserSerial.println(ServoPos);
     }
   }
 }
-//-----------------------------------------------------------------
 
-
-
-
-//-----------------------------------------------------------------
-//Write to Servos
-void ServoWrite(int ServoID, int Pos){//ServoControl Goes Here
-  byte Header = 170; //Header that opens the command and allows autobaudrate to be set
-  byte Device = 12; //Identifier for the maestro in case of chaining Default 12
-  byte TruncatedCommand = 04;//0x04 represents the command to set servo position
-  byte Servoplace = constrain(ServoID,0,999);//127);//the location of the servo on the controller
-  byte Data1 = 0;//This holds the lower 7 bits of the position
-  byte Data2 = 0;//This holds the upper 7 bits of the position
-  unsigned long ScalePos = Pos*4;
+// Writes a packet to move a servo with the ID [servoID] to position [pos].
+// Position represents a pulse length in microseconds.
+void servoWrite(int servoID, int pos) {
+  // The header for the communication protocol.
+  // Represents the start of a packet.
+  byte header = HEADER_CONST;
+  // Identifies the target microcontroller.
+  byte device = DEVICE_ID;
+  // Identifies the type of command being sent to the microcontroller.
+  // In this case, the constant 0x04 represents a set servo position command.
+  byte comm = COMMAND_ID;
+  // Identifies the servo that is being manipulated.
+  // Constraining to [0, 999] ensures a valid servo.
+  // TODO: Change this to ensure that we are moving a valid servo.
+  byte servo = constrain(servoID, 0, 999);
+  // The lower 7 bits of the position.
+  byte lower = 0;
+  // The upper 7 bits of the position.
+  byte upper = 0;
+  // The scaled position.
+  unsigned long scaledPos = pos * 4;
   UserSerial.println(ScalePos);
-  for (int i = 0; i < 7; i++){
-    bitWrite(Data1,i,bitRead(ScalePos,i));
+
+  // Write the position bits.
+  for (int i = 0; i < 7; i++) {
+    bitWrite(lower, i, bitRead(scaledPos, i));
+    bitWrite(upper, i, bitRead(scaledPos, i + 7));
   }
-  for (int i = 0; i < 7; i++){
-    bitWrite(Data2,i,bitRead(ScalePos,(i+7)));
-  }
-  //Write the packet
-  UserSerial.println(Header);
-  UserSerial.println(Device);
-  UserSerial.println(TruncatedCommand);
-  UserSerial.println(Servoplace);
-  UserSerial.println(Data1);
-  UserSerial.println(Data2);
-  
-  
-  AXSerial.write(Header);
-  AXSerial.write(Device);
-  AXSerial.write(TruncatedCommand);
-  AXSerial.write(Servoplace);
-  AXSerial.write(Data1);
-  AXSerial.write(Data2);
+
+  // Write the packet to the console for debugging purposes.
+  UserSerial.println(header);
+  UserSerial.println(device);
+  UserSerial.println(comm);
+  UserSerial.println(servo);
+  UserSerial.println(lower);
+  UserSerial.println(upper);
+
+  // Write the packet to the hardware serial port.
+  AXSerial.write(header);
+  AXSerial.write(device);
+  AXSerial.write(comm);
+  AXSerial.write(servo);
+  AXSerial.write(lower);
+  AXSerial.write(upper);
 }
 
 
